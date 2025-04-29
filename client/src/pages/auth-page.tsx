@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,8 +73,8 @@ export default function AuthPage() {
     },
   });
 
-  // Get auth state and functions from our auth hook
-  const { login, register, user, isLoading } = useAuth();
+  // Simple state for the auth page
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   // We don't need to check for already logged in user here
   // since App.tsx now handles that logic
@@ -84,10 +83,39 @@ export default function AuthPage() {
   const onLoginSubmit = async (data: LoginFormValues) => {
     setIsSubmittingLogin(true);
     try {
-      await login(data);
-      navigate("/");
+      // Make a direct API call to login
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        toast({
+          title: "Login failed",
+          description: errorData || "Could not log in. Please check your credentials.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const userData = await response.json();
+      console.log('Login successful:', userData);
+      toast({
+        title: "Success!",
+        description: "You're now logged in.",
+      });
+      
+      // Set local state (would normally update context)
+      setIsLoggedIn(true);
     } catch (error) {
-      // Error is handled by the login function
+      console.error('Login error:', error);
+      toast({
+        title: "Login error",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmittingLogin(false);
     }
@@ -97,10 +125,39 @@ export default function AuthPage() {
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     setIsSubmittingRegister(true);
     try {
-      await register(data);
-      navigate("/");
+      // Make a direct API call to register
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        toast({
+          title: "Registration failed",
+          description: errorData || "Could not register. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const userData = await response.json();
+      console.log('Registration successful:', userData);
+      toast({
+        title: "Success!",
+        description: "Account created successfully. You're now logged in.",
+      });
+      
+      // Set local state (would normally update context)
+      setIsLoggedIn(true);
     } catch (error) {
-      // Error is handled by the register function
+      console.error('Registration error:', error);
+      toast({
+        title: "Registration error",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmittingRegister(false);
     }

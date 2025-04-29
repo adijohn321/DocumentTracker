@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User as SelectUser, InsertUser } from "@shared/schema";
-import { apiRequest } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 // Define our auth context type
@@ -13,30 +12,20 @@ type AuthContextType = {
   logout: () => Promise<void>;
 };
 
-// Create the context with a more complete default value to avoid null checks
-const defaultState: AuthContextType = {
-  user: null,
-  isLoading: true,
-  error: null,
-  login: async () => {
-    throw new Error("login() not implemented");
-  },
-  register: async () => {
-    throw new Error("register() not implemented");
-  },
-  logout: async () => {
-    throw new Error("logout() not implemented");
-  }
-};
-
-// Create the auth context
-export const AuthContext = createContext<AuthContextType>(defaultState);
+// Create the auth context with basic default values
+const AuthContext = createContext<AuthContextType | null>(null);
 
 // Hook for components to get the auth context
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
 
 // Auth provider component to wrap the app
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [user, setUser] = useState<SelectUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,37 +33,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Check auth status on mount
   useEffect(() => {
-    const checkAuth = async () => {
+    async function checkAuthStatus() {
       try {
         setIsLoading(true);
-        const res = await fetch('/api/user');
+        const res = await fetch('/api/user', { credentials: 'include' });
+        
         if (res.ok) {
           const userData = await res.json();
           setUser(userData);
         } else {
-          // If we get a 401, that's not an error - it just means we're not logged in
+          // Not authenticated, that's normal
           setUser(null);
         }
       } catch (err) {
-        // Log the error but don't set it as a state - we'll just treat this as not authenticated
         console.error('Auth check failed:', err);
         setUser(null);
       } finally {
-        // Always set loading to false so the UI can proceed
         setIsLoading(false);
       }
-    };
+    }
 
-    // Run the check
-    checkAuth();
+    checkAuthStatus();
   }, []);
 
   // Login function
   const login = async (credentials: { username: string; password: string }) => {
     try {
-      console.log("Login attempt with:", credentials);
+      setError(null);
+      console.log("Login attempt:", credentials.username);
       
-      // Use plain fetch for debugging
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -82,16 +69,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         credentials: "include"
       });
       
-      console.log("Login response status:", res.status);
-      
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Login error:", errorText);
-        throw new Error(`Login failed: ${res.status} ${errorText}`);
+        const errorData = await res.text();
+        console.error("Login error:", errorData);
+        throw new Error(errorData || "Login failed");
       }
       
       const userData = await res.json();
-      console.log("Login success, user data:", userData);
+      console.log("Login successful:", userData.username);
       
       setUser(userData);
       toast({
@@ -99,8 +84,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: `Welcome back, ${userData.name}!`,
       });
     } catch (err) {
-      console.error("Login error caught:", err);
+      console.error("Login error:", err);
       const error = err instanceof Error ? err : new Error('Login failed');
+      setError(error);
       toast({
         title: "Login failed",
         description: error.message,
@@ -113,9 +99,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Register function
   const register = async (data: InsertUser) => {
     try {
-      console.log("Register attempt with:", data);
+      setError(null);
+      console.log("Register attempt:", data.username);
       
-      // Use plain fetch for debugging
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -123,16 +109,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         credentials: "include"
       });
       
-      console.log("Register response status:", res.status);
-      
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Register error:", errorText);
-        throw new Error(`Registration failed: ${res.status} ${errorText}`);
+        const errorData = await res.text();
+        console.error("Registration error:", errorData);
+        throw new Error(errorData || "Registration failed");
       }
       
       const userData = await res.json();
-      console.log("Registration success, user data:", userData);
+      console.log("Registration successful:", userData.username);
       
       setUser(userData);
       toast({
@@ -140,8 +124,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: `Welcome to DocTrack, ${userData.name}!`,
       });
     } catch (err) {
-      console.error("Registration error caught:", err);
+      console.error("Registration error:", err);
       const error = err instanceof Error ? err : new Error('Registration failed');
+      setError(error);
       toast({
         title: "Registration failed",
         description: error.message,
@@ -154,13 +139,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Logout function
   const logout = async () => {
     try {
-      await apiRequest("POST", "/api/logout");
+      setError(null);
+      console.log("Logout attempt");
+      
+      const res = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.text();
+        console.error("Logout error:", errorData);
+        throw new Error(errorData || "Logout failed");
+      }
+      
+      console.log("Logout successful");
       setUser(null);
       toast({
         title: "Logged out successfully",
       });
     } catch (err) {
+      console.error("Logout error:", err);
       const error = err instanceof Error ? err : new Error('Logout failed');
+      setError(error);
       toast({
         title: "Logout failed",
         description: error.message,
@@ -170,20 +171,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Create context value
-  const contextValue: AuthContextType = {
-    user,
-    isLoading,
-    error,
-    login,
-    register,
-    logout
-  };
-
   // Return provider with context value
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={{
+      user,
+      isLoading,
+      error,
+      login,
+      register,
+      logout
+    }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
