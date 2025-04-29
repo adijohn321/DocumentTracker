@@ -77,12 +77,8 @@ export default function AuthPage() {
   // Get auth state and functions from our auth hook
   const { login, register, user, isLoading } = useAuth();
   
-  // If user is already logged in, redirect to dashboard
-  useEffect(() => {
-    if (user && !isLoading) {
-      navigate("/");
-    }
-  }, [user, isLoading, navigate]);
+  // We don't need to check for already logged in user here
+  // since App.tsx now handles that logic
 
   // Handle login submit
   const onLoginSubmit = async (data: LoginFormValues) => {
