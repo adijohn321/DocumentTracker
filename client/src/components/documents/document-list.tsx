@@ -54,16 +54,16 @@ const documentStatusConfig: Record<string, { label: string; className: string }>
 };
 
 export function DocumentList() {
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [departmentFilter, setDepartmentFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 10;
 
   // Fetch documents based on filters
   const queryParams = new URLSearchParams();
-  if (statusFilter) queryParams.append("status", statusFilter);
-  if (departmentFilter) queryParams.append("department", departmentFilter);
+  if (statusFilter && statusFilter !== "all") queryParams.append("status", statusFilter);
+  if (departmentFilter && departmentFilter !== "all") queryParams.append("department", departmentFilter);
 
   const { data: documents, isLoading } = useQuery({
     queryKey: [`/api/documents?${queryParams.toString()}`],
@@ -119,7 +119,7 @@ export function DocumentList() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="pending">Pending Review</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
@@ -132,7 +132,7 @@ export function DocumentList() {
               <SelectValue placeholder="Department" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Departments</SelectItem>
+              <SelectItem value="all">All Departments</SelectItem>
               {departments?.map((dept: any) => (
                 <SelectItem key={dept.id} value={dept.id.toString()}>
                   {dept.name}
