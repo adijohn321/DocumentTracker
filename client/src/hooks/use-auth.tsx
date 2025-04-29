@@ -52,15 +52,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userData = await res.json();
           setUser(userData);
         } else {
+          // If we get a 401, that's not an error - it just means we're not logged in
           setUser(null);
         }
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to check authentication'));
+        // Log the error but don't set it as a state - we'll just treat this as not authenticated
+        console.error('Auth check failed:', err);
+        setUser(null);
       } finally {
+        // Always set loading to false so the UI can proceed
         setIsLoading(false);
       }
     };
 
+    // Run the check
     checkAuth();
   }, []);
 

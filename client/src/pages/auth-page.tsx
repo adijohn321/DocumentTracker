@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -77,20 +77,12 @@ export default function AuthPage() {
   // Get auth state and functions from our auth hook
   const { login, register, user, isLoading } = useAuth();
   
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-border" />
-      </div>
-    );
-  }
-
-  // Redirect if user is already logged in
-  if (user) {
-    navigate("/");
-    return null;
-  }
+  // If user is already logged in, redirect to dashboard
+  useEffect(() => {
+    if (user && !isLoading) {
+      navigate("/");
+    }
+  }, [user, isLoading, navigate]);
 
   // Handle login submit
   const onLoginSubmit = async (data: LoginFormValues) => {
