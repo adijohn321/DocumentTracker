@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -44,11 +43,10 @@ const registerSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-export default function AuthPage() {
+export default function AuthPage({ onAuthSuccess }: { onAuthSuccess: (user: any) => void }) {
   const [activeTab, setActiveTab] = useState<string>("login");
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
   const [isSubmittingRegister, setIsSubmittingRegister] = useState(false);
-  const [, navigate] = useLocation();
   const { toast } = useToast();
 
   // Login form
@@ -107,8 +105,8 @@ export default function AuthPage() {
         description: "You're now logged in.",
       });
       
-      // Set local state (would normally update context)
-      setIsLoggedIn(true);
+      // Call the onAuthSuccess callback with user data
+      onAuthSuccess(userData);
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -149,8 +147,8 @@ export default function AuthPage() {
         description: "Account created successfully. You're now logged in.",
       });
       
-      // Set local state (would normally update context)
-      setIsLoggedIn(true);
+      // Call the onAuthSuccess callback with user data
+      onAuthSuccess(userData);
     } catch (error) {
       console.error('Registration error:', error);
       toast({
