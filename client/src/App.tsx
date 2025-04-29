@@ -1,6 +1,7 @@
 import { Switch, Route, useLocation } from "wouter";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
+import { AuthProvider, updateAuthState } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
@@ -10,10 +11,11 @@ import CreateDocumentPage from "@/pages/create-document-page";
 import DepartmentsPage from "@/pages/departments-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import SettingsPage from "@/pages/settings-page";
+import { User as SelectUser } from "@shared/schema";
 
 // Simple app with routes
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<SelectUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [location, setLocation] = useLocation();
   
@@ -25,11 +27,15 @@ function App() {
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
+          updateAuthState(userData); // Update the global auth state
         }
       } catch (error) {
         console.error('Error checking auth status:', error);
       } finally {
         setIsLoading(false);
+        if (!user) {
+          updateAuthState(null); // Ensure global state is also updated
+        }
       }
     }
     
@@ -37,8 +43,9 @@ function App() {
   }, []);
   
   // Pass auth state to AuthPage
-  const handleAuthSuccess = (userData) => {
+  const handleAuthSuccess = (userData: SelectUser) => {
     setUser(userData);
+    updateAuthState(userData); // Update the global auth state
     setLocation('/');
   };
   
@@ -51,33 +58,35 @@ function App() {
   }
   
   return (
-    <TooltipProvider>
-      <Switch>
-        {!user ? (
-          // Public routes - only accessible when not logged in
-          <>
-            <Route path="/auth">
-              <AuthPage onAuthSuccess={handleAuthSuccess} />
-            </Route>
-            <Route path="/">
-              <AuthPage onAuthSuccess={handleAuthSuccess} />
-            </Route>
-          </>
-        ) : (
-          // Protected routes - only accessible when logged in
-          <>
-            <Route path="/" component={DashboardPage} />
-            <Route path="/documents" component={DocumentsPage} />
-            <Route path="/documents/:id" component={DocumentDetailPage} />
-            <Route path="/create-document" component={CreateDocumentPage} />
-            <Route path="/departments" component={DepartmentsPage} />
-            <Route path="/analytics" component={AnalyticsPage} />
-            <Route path="/settings" component={SettingsPage} />
-          </>
-        )}
-        <Route component={NotFound} />
-      </Switch>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Switch>
+          {!user ? (
+            // Public routes - only accessible when not logged in
+            <>
+              <Route path="/auth">
+                <AuthPage onAuthSuccess={handleAuthSuccess} />
+              </Route>
+              <Route path="/">
+                <AuthPage onAuthSuccess={handleAuthSuccess} />
+              </Route>
+            </>
+          ) : (
+            // Protected routes - only accessible when logged in
+            <>
+              <Route path="/" component={DashboardPage} />
+              <Route path="/documents" component={DocumentsPage} />
+              <Route path="/documents/:id" component={DocumentDetailPage} />
+              <Route path="/create-document" component={CreateDocumentPage} />
+              <Route path="/departments" component={DepartmentsPage} />
+              <Route path="/analytics" component={AnalyticsPage} />
+              <Route path="/settings" component={SettingsPage} />
+            </>
+          )}
+          <Route component={NotFound} />
+        </Switch>
+      </TooltipProvider>
+    </AuthProvider>
   );
 }
 

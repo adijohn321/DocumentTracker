@@ -1,5 +1,5 @@
 import { Bell, ChevronDown } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,14 +24,12 @@ interface HeaderProps {
 
 export function Header({ notifications = 0 }: HeaderProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [, navigate] = useLocation();
-
   const { logout, user } = useAuth();
 
   const handleLogout = async () => {
     try {
       await logout();
-      navigate("/auth");
+      // logout function in useAuth now redirects to /auth
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -60,20 +58,20 @@ export function Header({ notifications = 0 }: HeaderProps) {
             </div>
             
             <nav className="hidden md:ml-8 md:flex md:space-x-8">
-              <Link href="/">
-                <a className="border-b-2 border-primary text-primary px-1 pt-1 font-medium text-sm">Dashboard</a>
+              <Link href="/" className="border-b-2 border-primary text-primary px-1 pt-1 font-medium text-sm">
+                Dashboard
               </Link>
-              <Link href="/documents">
-                <a className="border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 px-1 pt-1 font-medium text-sm">Documents</a>
+              <Link href="/documents" className="border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 px-1 pt-1 font-medium text-sm">
+                Documents
               </Link>
-              <Link href="/departments">
-                <a className="border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 px-1 pt-1 font-medium text-sm">Departments</a>
+              <Link href="/departments" className="border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 px-1 pt-1 font-medium text-sm">
+                Departments
               </Link>
-              <Link href="/analytics">
-                <a className="border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 px-1 pt-1 font-medium text-sm">Analytics</a>
+              <Link href="/analytics" className="border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 px-1 pt-1 font-medium text-sm">
+                Analytics
               </Link>
-              <Link href="/settings">
-                <a className="border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 px-1 pt-1 font-medium text-sm">Settings</a>
+              <Link href="/settings" className="border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300 px-1 pt-1 font-medium text-sm">
+                Settings
               </Link>
             </nav>
           </div>

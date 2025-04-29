@@ -63,23 +63,23 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
         <nav className="mt-4 flex-1 px-2 space-y-1">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <a
+            <Link 
+              key={item.href} 
+              href={item.href} 
+              className={cn(
+                "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
+                isActive(item.href)
+                  ? "bg-primary-50 text-primary-700"
+                  : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900"
+              )}
+            >
+              <item.icon
                 className={cn(
-                  "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
-                  isActive(item.href)
-                    ? "bg-primary-50 text-primary-700"
-                    : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900"
+                  "mr-3 h-5 w-5",
+                  isActive(item.href) ? "text-primary-500" : "text-neutral-400 group-hover:text-neutral-500"
                 )}
-              >
-                <item.icon
-                  className={cn(
-                    "mr-3 h-5 w-5",
-                    isActive(item.href) ? "text-primary-500" : "text-neutral-400 group-hover:text-neutral-500"
-                  )}
-                />
-                {item.name}
-              </a>
+              />
+              {item.name}
             </Link>
           ))}
         </nav>
