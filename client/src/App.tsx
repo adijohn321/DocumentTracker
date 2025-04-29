@@ -9,6 +9,7 @@ import DocumentsPage from "@/pages/documents-page";
 import DocumentDetailPage from "@/pages/document-detail-page";
 import CreateDocumentPage from "@/pages/create-document-page";
 import DepartmentsPage from "@/pages/departments-page";
+import DocumentTypesPage from "@/pages/document-types-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import SettingsPage from "@/pages/settings-page";
 import { User as SelectUser } from "@shared/schema";
@@ -79,6 +80,7 @@ function App() {
               <Route path="/documents/:id" component={DocumentDetailPage} />
               <Route path="/create-document" component={CreateDocumentPage} />
               <Route path="/departments" component={DepartmentsPage} />
+              <Route path="/document-types" component={DocumentTypesPage} />
               <Route path="/analytics" component={AnalyticsPage} />
               <Route path="/settings" component={SettingsPage} />
             </>

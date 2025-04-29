@@ -424,6 +424,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Document types routes
+  app.get("/api/document-types", async (req, res) => {
+    try {
+      const documentTypes = await storage.getAllDocumentTypes();
+      res.json(documentTypes);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch document types" });
+    }
+  });
+
+  app.post("/api/document-types", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { name, description, workflowConfig } = req.body;
+      
+      // Validate required fields
+      if (!name) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      
+      // Create document type
+      const documentType = await storage.createDocumentType({
+        name,
+        description: description || "",
+        workflowConfig: workflowConfig ? JSON.stringify(workflowConfig) : null,
+      });
+      
+      res.status(201).json(documentType);
+    } catch (error) {
+      console.error("Error creating document type:", error);
+      res.status(500).json({ message: "Failed to create document type" });
+    }
+  });
+  
+  app.get("/api/document-types/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+      
+      const documentType = await storage.getDocumentType(id);
+      if (!documentType) {
+        return res.status(404).json({ message: "Document type not found" });
+      }
+      
+      res.json(documentType);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch document type" });
+    }
+  });
+  
   const httpServer = createServer(app);
   return httpServer;
 }
