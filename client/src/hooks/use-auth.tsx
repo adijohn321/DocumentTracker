@@ -72,14 +72,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Login function
   const login = async (credentials: { username: string; password: string }) => {
     try {
-      const res = await apiRequest("POST", "/api/login", credentials);
+      console.log("Login attempt with:", credentials);
+      
+      // Use plain fetch for debugging
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+        credentials: "include"
+      });
+      
+      console.log("Login response status:", res.status);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Login error:", errorText);
+        throw new Error(`Login failed: ${res.status} ${errorText}`);
+      }
+      
       const userData = await res.json();
+      console.log("Login success, user data:", userData);
+      
       setUser(userData);
       toast({
         title: "Logged in successfully",
         description: `Welcome back, ${userData.name}!`,
       });
     } catch (err) {
+      console.error("Login error caught:", err);
       const error = err instanceof Error ? err : new Error('Login failed');
       toast({
         title: "Login failed",
@@ -93,14 +113,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Register function
   const register = async (data: InsertUser) => {
     try {
-      const res = await apiRequest("POST", "/api/register", data);
+      console.log("Register attempt with:", data);
+      
+      // Use plain fetch for debugging
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include"
+      });
+      
+      console.log("Register response status:", res.status);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Register error:", errorText);
+        throw new Error(`Registration failed: ${res.status} ${errorText}`);
+      }
+      
       const userData = await res.json();
+      console.log("Registration success, user data:", userData);
+      
       setUser(userData);
       toast({
         title: "Registration successful",
         description: `Welcome to DocTrack, ${userData.name}!`,
       });
     } catch (err) {
+      console.error("Registration error caught:", err);
       const error = err instanceof Error ? err : new Error('Registration failed');
       toast({
         title: "Registration failed",
