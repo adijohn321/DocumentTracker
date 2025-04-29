@@ -11,8 +11,13 @@ import type {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db } from "./db";
+import { pool } from "./db";
+import { eq, desc, and, sql, asc } from "drizzle-orm";
 
 const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 // Interface defining all storage operations
 export interface IStorage {
@@ -311,4 +316,258 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database implementation of the storage interface
+export class DatabaseStorage implements IStorage {
+  public sessionStore: session.SessionStore;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
+    
+    // Initialize with default departments if none exist
+    this.initializeDepartments();
+  }
+  
+  private async initializeDepartments() {
+    const existingDepartments = await this.getAllDepartments();
+    
+    if (existingDepartments.length === 0) {
+      const departmentsList = [
+        { name: "Reception", description: "Document receiving and initial processing" },
+        { name: "Medical Records", description: "Patient records management" },
+        { name: "Finance", description: "Financial documents and billing" },
+        { name: "Administration", description: "Hospital administration documents" },
+        { name: "Laboratory", description: "Lab test results and documentation" },
+        { name: "Pharmacy", description: "Medication orders and inventory" },
+        { name: "Radiology", description: "Imaging reports and documentation" },
+      ];
+      
+      for (const dept of departmentsList) {
+        await this.createDepartment(dept);
+      }
+    }
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async getDepartment(id: number): Promise<Department | undefined> {
+    const [department] = await db.select().from(departments).where(eq(departments.id, id));
+    return department;
+  }
+
+  async getDepartmentByName(name: string): Promise<Department | undefined> {
+    const [department] = await db.select().from(departments).where(eq(departments.name, name));
+    return department;
+  }
+
+  async getAllDepartments(): Promise<Department[]> {
+    return await db.select().from(departments);
+  }
+
+  async createDepartment(department: InsertDepartment): Promise<Department> {
+    const [newDepartment] = await db.insert(departments).values(department).returning();
+    return newDepartment;
+  }
+
+  async getDocumentType(id: number): Promise<DocumentType | undefined> {
+    const [documentType] = await db.select().from(documentTypes).where(eq(documentTypes.id, id));
+    return documentType;
+  }
+
+  async getDocumentTypeByName(name: string): Promise<DocumentType | undefined> {
+    const [documentType] = await db.select().from(documentTypes).where(eq(documentTypes.name, name));
+    return documentType;
+  }
+
+  async getAllDocumentTypes(): Promise<DocumentType[]> {
+    return await db.select().from(documentTypes);
+  }
+
+  async createDocumentType(documentType: InsertDocumentType): Promise<DocumentType> {
+    const [newDocumentType] = await db.insert(documentTypes).values(documentType).returning();
+    return newDocumentType;
+  }
+
+  async getDocument(id: number): Promise<Document | undefined> {
+    const [document] = await db.select().from(documents).where(eq(documents.id, id));
+    return document;
+  }
+
+  async getDocumentByDocumentId(documentId: string): Promise<Document | undefined> {
+    const [document] = await db.select().from(documents).where(eq(documents.documentId, documentId));
+    return document;
+  }
+
+  async getDocumentsByStatus(status: string): Promise<Document[]> {
+    return await db.select().from(documents).where(eq(documents.status, status));
+  }
+
+  async getDocumentsByCreator(userId: number): Promise<Document[]> {
+    return await db.select().from(documents).where(eq(documents.createdBy, userId));
+  }
+
+  async getDocumentsByDepartment(departmentId: number): Promise<Document[]> {
+    return await db.select().from(documents).where(eq(documents.departmentId, departmentId));
+  }
+
+  async getAllDocuments(): Promise<Document[]> {
+    return await db.select().from(documents);
+  }
+
+  async getRecentDocuments(limit: number): Promise<Document[]> {
+    return await db.select()
+      .from(documents)
+      .orderBy(desc(documents.createdAt))
+      .limit(limit);
+  }
+
+  async createDocument(document: InsertDocument): Promise<Document> {
+    const [newDocument] = await db.insert(documents).values(document).returning();
+    return newDocument;
+  }
+
+  async updateDocument(id: number, updates: Partial<Document>): Promise<Document | undefined> {
+    const [updatedDocument] = await db
+      .update(documents)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(documents.id, id))
+      .returning();
+    
+    return updatedDocument;
+  }
+
+  async getDocumentHistory(documentId: number): Promise<DocumentHistory[]> {
+    return await db
+      .select()
+      .from(documentHistory)
+      .where(eq(documentHistory.documentId, documentId))
+      .orderBy(desc(documentHistory.changedAt));
+  }
+
+  async addDocumentHistory(history: InsertDocumentHistory): Promise<DocumentHistory> {
+    const [newHistory] = await db.insert(documentHistory).values(history).returning();
+    return newHistory;
+  }
+
+  async getDashboardStats(): Promise<DashboardStats> {
+    // Total documents count
+    const [totalCountResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(documents);
+    
+    // Active documents count (not archived or completed)
+    const [activeCountResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(documents)
+      .where(sql`status != 'archived' AND status != 'completed'`);
+    
+    // Pending approvals count
+    const [pendingApprovalsResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(documents)
+      .where(eq(documents.status, 'pending_approval'));
+    
+    // Average processing time
+    const [avgProcessingTimeResult] = await db
+      .select({
+        avgTime: sql<string>`
+          CASE WHEN COUNT(*) > 0 
+          THEN to_char(AVG(EXTRACT(epoch FROM ("completed_at" - "created_at")) / 86400), 'FM999990.0')
+          ELSE '0'
+          END
+        `
+      })
+      .from(documents)
+      .where(and(
+        eq(documents.status, 'completed'),
+        sql`"completed_at" IS NOT NULL`
+      ));
+    
+    return {
+      totalDocuments: totalCountResult.count || 0,
+      activeDocuments: activeCountResult.count || 0,
+      avgProcessingTime: avgProcessingTimeResult.avgTime || "0",
+      pendingApprovals: pendingApprovalsResult.count || 0
+    };
+  }
+
+  async getDocumentsByDepartment(): Promise<DepartmentMetric[]> {
+    // Get all departments
+    const allDepartments = await db.select().from(departments);
+    
+    // Count documents per department
+    const departmentCounts = await db
+      .select({
+        departmentId: documents.departmentId,
+        count: sql<number>`count(*)`
+      })
+      .from(documents)
+      .where(sql`department_id IS NOT NULL`)
+      .groupBy(documents.departmentId);
+    
+    // Create a map of department counts
+    const countsMap = new Map<number, number>();
+    departmentCounts.forEach(item => {
+      countsMap.set(item.departmentId, item.count);
+    });
+    
+    // Format results
+    return allDepartments.map(dept => ({
+      departmentId: dept.id,
+      departmentName: dept.name,
+      count: countsMap.get(dept.id) || 0
+    }));
+  }
+
+  async getProcessingTimeByDocumentType(): Promise<ProcessingTimeMetric[]> {
+    // Get all document types
+    const allDocumentTypes = await db.select().from(documentTypes);
+    
+    // Calculate average processing time per document type
+    const processingTimes = await db
+      .select({
+        documentTypeId: documents.typeId,
+        avgProcessingTime: sql<number>`
+          AVG(EXTRACT(epoch FROM ("completed_at" - "created_at")) / 3600)
+        `
+      })
+      .from(documents)
+      .where(and(
+        eq(documents.status, 'completed'),
+        sql`"completed_at" IS NOT NULL`,
+        sql`"type_id" IS NOT NULL`
+      ))
+      .groupBy(documents.typeId);
+    
+    // Create a map of average processing times
+    const timesMap = new Map<number, number>();
+    processingTimes.forEach(item => {
+      timesMap.set(item.documentTypeId, item.avgProcessingTime || 0);
+    });
+    
+    // Format results
+    return allDocumentTypes.map(type => ({
+      documentTypeId: type.id,
+      documentTypeName: type.name,
+      avgProcessingTime: timesMap.get(type.id) || 0
+    }));
+  }
+}
+
+// Export an instance of the database storage implementation
+export const storage = new DatabaseStorage();
