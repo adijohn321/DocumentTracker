@@ -1,5 +1,6 @@
 import { Bell, ChevronDown } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,14 +26,25 @@ export function Header({ notifications = 0 }: HeaderProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [, navigate] = useLocation();
 
-  const handleLogout = () => {
-    // For now, just navigate to auth page
-    navigate("/auth");
+  const { logout, user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/auth");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
-  // Mock user data until authentication is fully working
-  const userName = "Demo User";
-  const userInitials = "DU";
+  // Get user data from auth context
+  const userName = user?.name || "User";
+  const userInitials = userName
+    .split(" ")
+    .map(name => name[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
 
   return (
     <header className="bg-white border-b border-neutral-200 shadow-sm">

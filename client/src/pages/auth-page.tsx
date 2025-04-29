@@ -74,7 +74,17 @@ export default function AuthPage() {
     },
   });
 
-  const { loginMutation, registerMutation, user } = useAuth();
+  // Get auth state and functions from our auth hook
+  const { login, register, user, isLoading } = useAuth();
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-border" />
+      </div>
+    );
+  }
 
   // Redirect if user is already logged in
   if (user) {
@@ -86,10 +96,10 @@ export default function AuthPage() {
   const onLoginSubmit = async (data: LoginFormValues) => {
     setIsSubmittingLogin(true);
     try {
-      await loginMutation.mutateAsync(data);
+      await login(data);
       navigate("/");
     } catch (error) {
-      // Error is handled by the mutation
+      // Error is handled by the login function
     } finally {
       setIsSubmittingLogin(false);
     }
@@ -99,10 +109,10 @@ export default function AuthPage() {
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     setIsSubmittingRegister(true);
     try {
-      await registerMutation.mutateAsync(data);
+      await register(data);
       navigate("/");
     } catch (error) {
-      // Error is handled by the mutation
+      // Error is handled by the register function
     } finally {
       setIsSubmittingRegister(false);
     }
