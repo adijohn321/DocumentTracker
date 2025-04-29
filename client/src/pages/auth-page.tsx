@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +25,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { apiRequest } from "@/lib/queryClient";
 
 // Login schema
 const loginSchema = z.object({
@@ -74,25 +74,22 @@ export default function AuthPage() {
     },
   });
 
+  const { loginMutation, registerMutation, user } = useAuth();
+
+  // Redirect if user is already logged in
+  if (user) {
+    navigate("/");
+    return null;
+  }
+
   // Handle login submit
   const onLoginSubmit = async (data: LoginFormValues) => {
+    setIsSubmittingLogin(true);
     try {
-      setIsSubmittingLogin(true);
-      const response = await apiRequest("POST", "/api/login", data);
-      const user = await response.json();
-      
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${user.name || user.username}!`,
-      });
-      
+      await loginMutation.mutateAsync(data);
       navigate("/");
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
+      // Error is handled by the mutation
     } finally {
       setIsSubmittingLogin(false);
     }
@@ -100,23 +97,12 @@ export default function AuthPage() {
 
   // Handle register submit
   const onRegisterSubmit = async (data: RegisterFormValues) => {
+    setIsSubmittingRegister(true);
     try {
-      setIsSubmittingRegister(true);
-      const response = await apiRequest("POST", "/api/register", data);
-      const user = await response.json();
-      
-      toast({
-        title: "Registration successful",
-        description: `Welcome to DocTrack, ${user.name || user.username}!`,
-      });
-      
+      await registerMutation.mutateAsync(data);
       navigate("/");
     } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive",
-      });
+      // Error is handled by the mutation
     } finally {
       setIsSubmittingRegister(false);
     }

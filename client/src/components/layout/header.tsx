@@ -26,11 +26,11 @@ export function Header({ notifications = 0 }: HeaderProps) {
   const [, navigate] = useLocation();
 
   const handleLogout = () => {
-    // Simple redirect to auth page
+    // For now, just navigate to auth page
     navigate("/auth");
   };
 
-  // Mock user data for now
+  // Mock user data until authentication is fully working
   const userName = "Demo User";
   const userInitials = "DU";
 
